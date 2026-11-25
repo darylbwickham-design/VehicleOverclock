@@ -1,0 +1,20 @@
+{
+  "FileVersion": 3,
+  "Version": 4,
+  "VersionName": "0.1.3",
+  "SemVersion": "0.1.3",
+  "GameVersion": ">=520140 <520141",
+  "FriendlyName": "Vehicle Overclock",
+  "Description": "Private testing only. Vehicle Overclock is an unstable alpha. Expect bugs. No support is available at this stage.",
+  "Category": "Modding",
+  "CanContainContent": false,
+  "Modules": [
+    { "Name": "VehicleOverclock", "Type": "Runtime", "LoadingPhase": "PostDefault" }
+  ],
+  "Plugins": [
+    { "Name": "SML", "Enabled": true, "SemVersion": "^3.12.1" },
+    { "Name": "ChaosVehiclesPlugin", "Enabled": true }
+  ]
+}
+
+
