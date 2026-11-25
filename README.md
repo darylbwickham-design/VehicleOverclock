@@ -49,6 +49,6 @@ Bonuses apply during manual driving above 100% clock. They start at 55% of each 
 
 ## Installation
 
-With Satisfactory closed, extract the **VehicleOverclock** folder into **Satisfactory/FactoryGame/Mods** alongside **SML**. Launch the game with mods enabled.
+Install **Vehicle Overclocking** from its Hidden listing with Satisfactory Mod Manager. Its mod reference is `vehiclephysics`. If you installed the earlier private ZIP by hand, close the game and move the old `FactoryGame/Mods/VehicleOverclock` folder outside `Mods` before installing the SMM version. Both builds contain the same native module.
 
-To build from source, place the plugin in the matching SML starter project's **Mods** directory. Build the **FactoryGameSteam** target for **Win64 Shipping** using the Coffee Stain Unreal Engine.
+To build from source, put this repository in `Mods/vehiclephysics` in the matching SML starter project. Build the **FactoryGameSteam** target for **Win64 Shipping** using the Coffee Stain Unreal Engine. The native module name is `VehicleOverclock` to preserve existing save references.

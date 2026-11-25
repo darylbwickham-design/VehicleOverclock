@@ -179,7 +179,7 @@ void UVehicleHandlingResearch::Initialize(FSubsystemCollectionBase& Collection)
     Collection.InitializeDependency<UModContentRegistry>();
     auto* Registry=UModContentRegistry::Get(GetWorld());
     if(Registry && GetMutableDefault<UVehicleHandlingTree>()->Configure())
-        Registry->RegisterResearchTree(TEXT("VehicleOverclock"),UVehicleHandlingTree::StaticClass());
+        Registry->RegisterResearchTree(TEXT("vehiclephysics"),UVehicleHandlingTree::StaticClass());
 }
 
 FVehicleHandlingRanks FVehicleHandlingRanks::Read(UWorld* World)
