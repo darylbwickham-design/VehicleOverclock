@@ -11,6 +11,7 @@ namespace
 {
     TStrongObjectPtr<UFGInputMappingContext> VehicleControls;
     TWeakObjectPtr<UInputAction> DriftAction;
+    TWeakObjectPtr<UInputAction> AirAction;
 }
 
 void VehicleDriftInput::Register()
@@ -31,20 +32,32 @@ void VehicleDriftInput::Register()
         ->SetObjectPropertyValue_InContainer(Action, Settings);
     Context->MapKey(Action, EKeys::LeftControl);
     DriftAction = Action;
+    auto* Air = NewObject<UInputAction>(Context, TEXT("IA_VehicleOverclock_AirControl"));
+    Air->bConsumeInput = false;
+    Air->ActionDescription = NSLOCTEXT("VehicleOverclock", "AirHelp", "Hold in the air to use steering for roll and throttle/brake for pitch.");
+    auto* AirSettings = NewObject<UPlayerMappableKeySettings>(Air);
+    AirSettings->Name = AirMappingName;
+    AirSettings->DisplayName = NSLOCTEXT("VehicleOverclock", "AirControl", "Vehicle air control");
+    AirSettings->DisplayCategory = Settings->DisplayCategory;
+    FindFieldChecked<FObjectPropertyBase>(UInputAction::StaticClass(), TEXT("PlayerMappableKeySettings"))
+        ->SetObjectPropertyValue_InContainer(Air, AirSettings);
+    Context->MapKey(Air, EKeys::LeftAlt);
+    AirAction = Air;
 }
 
-UPlayerMappableKeySettings* VehicleDriftInput::KeySettings()
+UPlayerMappableKeySettings* VehicleDriftInput::KeySettings(bool AirControl)
 {
-    return DriftAction.IsValid() ? DriftAction->GetPlayerMappableKeySettings().Get() : nullptr;
+    auto* Action = AirControl ? AirAction.Get() : DriftAction.Get();
+    return Action ? Action->GetPlayerMappableKeySettings().Get() : nullptr;
 }
 
-bool VehicleDriftInput::IsHeld(APlayerController* Controller, bool& JustPressed)
+bool VehicleDriftInput::IsHeld(APlayerController* Controller, bool& JustPressed, bool AirControl)
 {
     JustPressed = false;
     if (!Controller || !DriftAction.IsValid()) return false;
     FKey Key;
     TArray<FKey> Modifiers;
-    if (!UFGInputLibrary::GetCurrentMappingForAction(Controller, MappingName, Key, Modifiers)
+    if (!UFGInputLibrary::GetCurrentMappingForAction(Controller, AirControl ? AirMappingName : MappingName, Key, Modifiers)
         || !Key.IsValid()) return false;
     for (const FKey& Modifier : Modifiers)
         if (!Controller->IsInputKeyDown(Modifier)) return false;

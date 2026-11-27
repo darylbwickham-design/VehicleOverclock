@@ -39,7 +39,23 @@ Research **Vehicle overclocking** once at the MAM for 20 Iron Plates and 30 Wire
 | Truck | Haul tyres, brake servo and load stabiliser for both freight chassis. |
 | Controlled drift | For manually driven Explorers and Trucks. Steer above 29 km/h with the tyres on the ground, then hold **Left Ctrl** to swing the rear outward while the booster helps maintain corner-entry speed. Braking or using the handbrake cuts the assist. In **Mods**, select **Vehicle Overclock**, click **Boost hotkey** and press your preferred key. The same key is listed under **Vehicles → Vehicle drift** in the game controls. |
 
-Shift-click Compacted Coal, Packaged Turbofuel, Packaged Rocket Fuel or Packaged Ionized Fuel from your inventory while the **Overclocking** tab is selected, or drag a stack into the booster fuel slot below the shards. Click the slot to return unopened fuel. Dismantling also returns unopened booster fuel through the normal dismantle refund, with the standard overflow crate if your inventory is full. The partly burned unit has already been consumed. Each vehicle keeps its own booster fuel and partially used charge between drives. The HUD beside the speedometer shows unopened units and the current charge. Both boosters burn 100 MJ per second of firing. Releasing Boost cuts thrust.
+The MAM uses aligned research tiers with clear rows between them. Tractor handling is on the left, Explorer handling and racing controls in the centre, with Truck handling and fleet efficiency on the right. Existing research retains its unlocks.
+
+The Explorer has nine additional racing studies.
+
+| Research | Effect |
+| --- | --- |
+| Drift control I and II | Rear slip builds over 0.6 then 0.4 seconds. Steer into the drift to tighten the curve, or countersteer to widen and straighten it. Holding the opposite direction keeps the original drift side until Boost is released. |
+| Corner exit | Rear grip returns over 0.45 seconds. The chassis settles toward its travel direction after Boost is released. |
+| Air control I, II and III | Improve airborne rotation and damping. A/D controls yaw. Hold **Air control**, default **Left Alt**, for A/D roll and W/S pitch. Vehicle steering, throttle and brake bindings are used, including user remaps. Orientation uses no booster fuel. |
+| Air thrusters | Hold Boost and a direction to adjust horizontal flight. Without a direction input, thrust is forward. Uses the sulphur-based booster reserve. |
+| Landing recovery I and II | Cushion the approach near a surface and damp rebound, pitch and roll at touchdown. Rank II also prepares a drift when Boost and steering are held before landing. |
+
+Both **Boost hotkey** and **Air control hotkey** can be changed in the mod options or the game's Vehicle controls. Full Explorer steering research also provides speed-sensitive yaw and cornering assistance during ordinary overclocked driving.
+
+The Tractor has its own three-rank **Air control** branch with the same modifier and directional controls. Full air research on either chassis permits continuous pitch and roll for complete flips, with damping on release. Rotation requires no booster fuel. The Tractor's forward rocket research provides grounded thrust.
+
+Shift-click Compacted Coal, Packaged Turbofuel, Packaged Rocket Fuel or Packaged Ionized Fuel from your inventory while the **Overclocking** tab is selected, or drag a stack into the booster fuel slot below the shards. Click the slot to return unopened fuel. Dismantling also returns unopened booster fuel through the normal dismantle refund, with the standard overflow crate if your inventory is full. The partly burned unit has already been consumed. Each vehicle keeps its own booster fuel and partially used charge between drives. The HUD beside the speedometer shows unopened units and the current charge. Ground and air boosters burn 100 MJ per second of firing. Releasing Boost cuts thrust.
 
 Speed-sensitive grip, braking and stability build up between 55% and 115% of stock geared speed. The Explorer's third shard adds less speed than the first two.
 

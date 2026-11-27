@@ -95,6 +95,21 @@ def render(name):
             disc(28,77,9,PAPER); disc(28,77,6,INK)
             line([(21,75),(28,78),(35,75)],accent,2)
             line([(28,78),(28,83)],accent,2)
+        elif kind == "drift":
+            line([(16,82),(24,80),(30,74),(34,70)],accent,3)
+            line([(26,84),(34,82),(40,76)],PAPER,2)
+        elif kind in ("air", "thruster"):
+            line([(16,80),(27,70),(38,80)],accent,3)
+            line([(27,70),(27,83)],PAPER,2)
+            if kind == "thruster":
+                line([(42,74),(48,78),(42,82)],accent,3)
+        elif kind == "land":
+            line([(17,82),(40,82)],PAPER,2)
+            line([(28,69),(28,78)],accent,3)
+            line([(22,74),(28,79),(34,74)],accent,3)
+        elif kind == "exit":
+            line([(16,80),(26,80),(34,74),(41,74)],accent,3)
+            line([(37,70),(42,74),(37,78)],PAPER,2)
         else:
             for x in (21,30,39):
                 line([(x,72),(x-4,82)],accent,3)
@@ -133,4 +148,8 @@ if __name__ == "__main__":
     for icon in ["clock","tractor","tractor_grip1","tractor_grip2","tractor_grip3","tractor_aero1","tractor_aero2","tractor_aero3","tractor_brake1","tractor_brake2","tractor_brake3","tractor_stability","tractor_rocket","explorer","explorer_ballast","explorer_spring","explorer_brake","explorer_stability","truck","truck_grip","truck_brake","truck_stability","drift"]:
         render(icon)
     for icon in ["fleet_1","fleet_2","fleet_3","fleet_4","explorer_steer1","explorer_steer2","explorer_steer3"]:
+        render(icon)
+    for icon in ["explorer_drift1","explorer_drift2","explorer_exit","explorer_air1","explorer_air2","explorer_air3","explorer_thruster","explorer_land1","explorer_land2"]:
+        render(icon)
+    for icon in ["tractor_air1","tractor_air2","tractor_air3"]:
         render(icon)

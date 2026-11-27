@@ -122,5 +122,6 @@ private:
     int32 InitialPageCount = 0;
     TWeakObjectPtr<AFGVehicle> DriftVehicle;
     bool bDriftPressed = false;
+    float UntilFlightInput = 0.f;
     bool bOpenedWhileDriving = false;
 };

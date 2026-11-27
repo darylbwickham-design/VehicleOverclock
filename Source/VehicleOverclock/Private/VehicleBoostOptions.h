@@ -10,9 +10,12 @@ UCLASS()
 class UVehicleBoostOptions : public UUserWidget
 {
     GENERATED_BODY()
+public:
+    bool bAirControl = false;
 protected:
     TSharedRef<SWidget> RebuildWidget() override;
 private:
+    UPROPERTY(Transient) TObjectPtr<UVehicleBoostOptions> AirSelector;
     void SelectKey(const FInputChord& Chord);
     void SaveKey(const FInputChord& Chord);
     FInputChord CurrentKey() const;

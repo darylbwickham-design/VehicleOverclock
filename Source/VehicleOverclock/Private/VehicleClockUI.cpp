@@ -10,6 +10,7 @@
 #include "FGPlayerController.h"
 #include "FGTrain.h"
 #include "FGVehicle.h"
+#include "WheeledVehicles/FGWheeledVehicle.h"
 #include "UI/FGGameUI.h"
 #include "UI/FGInteractWidget.h"
 #include "Components/CanvasPanel.h"
@@ -184,12 +185,13 @@ TSharedRef<SWidget> UVehicleClockPage::RebuildWidget()
     [SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",13)).Text_Lambda([this] {
         if (!Learned.bCalibrated) return FText::FromString(TEXT("Research Vehicle overclocking at the MAM to fit Power Shards."));
         if (VehicleFamily(Vehicle) == EVehicleFamily::Explorer)
-            return FText::FromString(FString::Printf(TEXT("Explorer ballast    %d / 3     Steering rack    %d / 3\nRally stabiliser    %s     Controlled drift    %s"),
-                Learned.Ballast,Learned.Steering,Learned.bStability?TEXT("Installed"):TEXT("Locked"),Learned.bDrift?TEXT("Available"):TEXT("Locked")));
+            return FText::FromString(FString::Printf(TEXT("Steering    %d / 3     Drift control    %d / 2     Air control    %d / 3\nLanding    %d / 2     Air thrusters    %s     Corner exit    %s"),
+                Learned.Steering,Learned.DriftControl,Learned.AirControl,Learned.Landing,
+                Learned.bAirThruster?TEXT("Installed"):TEXT("Locked"),Learned.bDriftExit?TEXT("Installed"):TEXT("Locked")));
         if (VehicleFamily(Vehicle) == EVehicleFamily::Other || VehicleFamily(Vehicle) == EVehicleFamily::Rail)
             return FText::FromString(TEXT("Fleet overclocking unlocked"));
         const FString Booster = VehicleFamily(Vehicle) == EVehicleFamily::Tractor
-            ? FString::Printf(TEXT("Forward rocket    %s"), Learned.bRocket ? TEXT("Installed") : TEXT("Locked"))
+            ? FString::Printf(TEXT("Rocket    %s     Air    %d / 3"), Learned.bRocket ? TEXT("Installed") : TEXT("Locked"), Learned.AirControl)
             : FString::Printf(TEXT("Controlled drift    %s"), Learned.bDrift ? TEXT("Available") : TEXT("Locked"));
         return FText::FromString(FString::Printf(TEXT("Tyre grip    %d / 3     Downforce    %d / 3     Braking    %d / 3\nStability control    %s     %s"),
             Learned.Grip,Learned.Aero,Learned.Brakes,Learned.bStability?TEXT("Installed"):TEXT("Locked"),*Booster));
@@ -331,7 +333,7 @@ void UVehicleClockHUD::Detach()
     OriginalBody=nullptr; Body=nullptr; Pages=nullptr; Slider=nullptr; Headers=nullptr; Vehicle.Reset(); Menu.Reset();
 }
 
-void UVehicleClockHUD::Tick(float)
+void UVehicleClockHUD::Tick(float DeltaTime)
 {
     auto* PC=Cast<AFGPlayerController>(GetWorld()->GetFirstPlayerController());
     auto* UI=PC && PC->IsLocalController()? PC->GetGameUI():nullptr;
@@ -340,6 +342,18 @@ void UVehicleClockHUD::Tick(float)
     auto* Driven = VehicleClock::DrivenBy(PC);
     bool JustPressed = false;
     const bool Pressed = Driven && Stack.IsEmpty() && !PC->bShowMouseCursor && VehicleDriftInput::IsHeld(PC, JustPressed);
+    UntilFlightInput -= DeltaTime;
+    if (Driven && (VehicleFamily(Driven) == EVehicleFamily::Explorer || VehicleFamily(Driven) == EVehicleFamily::Tractor) && UntilFlightInput <= 0.f)
+    {
+        UntilFlightInput = .05f;
+        auto* Move = CastChecked<AFGWheeledVehicle>(Driven)->GetVehicleMovementComponent();
+        const bool Active = Stack.IsEmpty() && !PC->bShowMouseCursor && !PC->IsPaused();
+        const bool AirModifier = Active && VehicleDriftInput::IsHeld(PC, JustPressed, true);
+        const FVector2D Axes = Active && Move ? FVector2D(Move->GetSteeringInput(),
+            FMath::Clamp(Move->GetThrottleInput() - Move->GetBrakeInput(), -1.f, 1.f)) : FVector2D::ZeroVector;
+        if (auto* Remote = PC->GetRemoteCallObjectOfClass<UVehicleClockRemote>())
+            Remote->Flight(Driven, Axes, AirModifier);
+    }
     UpdateFuelHUD(PC, Driven, !Stack.IsEmpty());
     if (Pressed != bDriftPressed || DriftVehicle.Get() != Driven)
     {

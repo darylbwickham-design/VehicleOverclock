@@ -96,6 +96,8 @@ void AVehicleClock::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
     DOREPLIFETIME(AVehicleClock, FuelCharge);
     DOREPLIFETIME(AVehicleClock, ThrustDirection);
     DOREPLIFETIME(AVehicleClock, bDriftHeld);
+    DOREPLIFETIME(AVehicleClock, FlightAxes);
+    DOREPLIFETIME(AVehicleClock, bAirModifier);
 }
 
 AVehicleClock* AVehicleClock::Find(const AFGVehicle* Target)
@@ -167,6 +169,7 @@ void AVehicleClock::ReturnShards(AActor* DropAt)
 void AVehicleClock::ControllerChanged(APawn* Pawn, AController* OldController, AController* NewController)
 {
     if (HasAuthority() && OldController != NewController) RequestDrift(false);
+    if (HasAuthority() && OldController != NewController) RequestFlight(FVector2D::ZeroVector, false);
     if (OldController && OldController != NewController && OldController->IsPlayerController() && Shards > 0)
         ReturnShards(Pawn);
 }
@@ -218,6 +221,12 @@ void AVehicleClock::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
     UntilResearchCheck -= DeltaSeconds;
+    FlightInputAge += DeltaSeconds;
+    if (HasAuthority() && FlightInputAge > .35f)
+    {
+        FlightAxes = FVector2D::ZeroVector;
+        bAirModifier = false;
+    }
     UntilDriverCheck -= DeltaSeconds;
     if(UntilDriverCheck <= 0.f)
     {
@@ -227,14 +236,18 @@ void AVehicleClock::Tick(float DeltaSeconds)
         if (!IsActorBeingDestroyed()) UpdateDrive();
     }
     if (IsActorBeingDestroyed()) return;
-    if (IsValid(Vehicle) && !Vehicle->GetDriver() && LastRearSlip > 0.f)
+    if (IsValid(Vehicle) && !Vehicle->GetDriver())
     {
         DriftBlend = 0.f;
+        DriftEntrySpeed = 0.f;
+        AirTime = 0.f;
+        LandingTime = 0.f;
+        bWasAirborne = false;
         SetWheelHandling(0.f, 0.f);
     }
-    if ((Applied > 1.f || bDriftHeld || ThrustDirection || DriftBlend > 0.f || LastRearSlip > 0.f) && IsValid(Vehicle) && Vehicle->GetDriver())
+    if ((Applied > 1.f || bDriftHeld || ThrustDirection || DriftBlend > 0.f || LastRearSlip > 0.f || HasRacingControls()) && IsValid(Vehicle) && Vehicle->GetDriver())
         UpdateHandling(DeltaSeconds);
-    if (HasAuthority() && !HasBoosterFuel() && !Shards && (!bDriftHeld || !IsValid(Vehicle) || !Vehicle->GetDriver()) && DriftBlend <= 0.f)
+    if (HasAuthority() && !HasBoosterFuel() && !Shards && (!HasRacingControls() || !IsValid(Vehicle) || !Vehicle->GetDriver()) && (!bDriftHeld || !IsValid(Vehicle) || !Vehicle->GetDriver()) && DriftBlend <= 0.f)
         Destroy();
 }
 
@@ -257,7 +270,7 @@ void AVehicleClock::UpdateDrive()
         else SetWheelClock(Scale);
         AppliedEfficiency = Handling.Efficiency;
     }
-    SetActorTickInterval(Manual && !Loco && (Applied > 1.f || bDriftHeld || ThrustDirection) ? 0.f : .2f);
+    SetActorTickInterval(Manual && !Loco && (Applied > 1.f || bDriftHeld || ThrustDirection || DriftBlend > 0.f || HasRacingControls()) ? 0.f : .2f);
     if (Loco && Applied > 1.f) SetTrainSpeedLimit();
 }
 
@@ -354,12 +367,9 @@ void AVehicleClock::RequestDrift(bool Held)
     UntilDriverCheck = 0.f;
     if (!Held)
     {
-        DriftEntrySpeed = 0.f;
         ThrustDirection = 0;
-        DriftBlend = 0.f;
-        if (LastRearSlip > 0.f) SetWheelHandling(LastGripBonus, LastBrakeBonus);
     }
-    SetActorTickInterval(Held || Applied > 1.f ? 0.f : .2f);
+    SetActorTickInterval(0.f);
     ForceNetUpdate();
 }
 
@@ -382,59 +392,6 @@ float AVehicleClock::MeterBooster(float Seconds)
     FuelCharge -= Used;
     if (!FuelCharge) BurningType = nullptr;
     return Used / Demand;
-}
-
-void AVehicleClock::UpdateBoost(float Seconds, float Steering, bool Grounded)
-{
-    auto* Car = CastChecked<AFGWheeledVehicle>(Vehicle);
-    auto* Mesh = Car->GetMesh();
-    const FVector Forward = Car->GetActorForwardVector().GetSafeNormal2D();
-    const FVector Right(-Forward.Y, Forward.X, 0.f);
-    const FVector Velocity = Mesh->GetPhysicsLinearVelocity();
-    const float Speed = FVector::DotProduct(Velocity, Forward);
-    float Duty = 1.f;
-    if (HasAuthority())
-    {
-        int8 Direction = 0;
-        if (bDriftHeld && Grounded && !Car->IsSimulated() && Car->GetDriver() && HasBoosterFuel())
-        {
-            if (Handling.bRocket && Speed < 4200.f) Direction = 2;
-            else if (Handling.bDrift && Speed > 800.f && FMath::Abs(Steering) > .15f &&
-                Car->GetVehicleMovementComponent()->GetModifiedBrakeInput() < .1f &&
-                !Car->GetVehicleMovementComponent()->GetHandbrakeInput())
-                Direction = Steering > 0.f ? 1 : -1;
-        }
-        if (Direction && (Duty = MeterBooster(Seconds)) <= 0.f) Direction = 0;
-        if (Direction != ThrustDirection) { ThrustDirection = Direction; ForceNetUpdate(); }
-    }
-    DriftBlend = FMath::Abs(ThrustDirection) == 1 ? Duty : 0.f;
-    if (!ThrustDirection || !Grounded)
-    {
-        DriftEntrySpeed = 0.f;
-        return;
-    }
-    if (ThrustDirection == 2)
-    {
-        const float Acceleration = FMath::Clamp((4200.f - Speed) * 2.5f, 0.f, 1450.f);
-        Mesh->AddForce(Forward * Acceleration * Duty, NAME_None, true);
-        return;
-    }
-    const float Side = float(ThrustDirection);
-    if (DriftEntrySpeed <= 0.f) DriftEntrySpeed = Speed;
-    // Maintain the entry pace through tyre scrub. Releasing Boost or braking ends the assist.
-    const float TargetSlip = FMath::Clamp(Speed * .22f, 240.f, 560.f);
-    const float Slip = -FVector::DotProduct(Velocity, Right) * Side;
-    const float SideForce = FMath::Clamp((TargetSlip - Slip) * 4.f, 0.f, 1350.f);
-    const float ForwardForce = FMath::Clamp((DriftEntrySpeed * 1.09f - Speed) * 6.f, 0.f, 2250.f);
-    // Direct part of the side thrust through the rear of the chassis to swing the tail.
-    const FVector Lateral = -Right * Side * SideForce * Duty;
-    Mesh->AddForce(Forward * ForwardForce * Duty + Lateral * .6f, NAME_None, true);
-    const FVector Rear = Mesh->GetCenterOfMass() - Forward * (VehicleFamily(Car) == EVehicleFamily::Truck ? 150.f : 100.f);
-    Mesh->AddForceAtLocation(Lateral * (.4f * Mesh->GetMass()), Rear);
-    const float Yaw = Mesh->GetPhysicsAngularVelocityInRadians().Z;
-    const float TargetYaw = Side * FMath::Lerp(.38f, 1.05f, FMath::Abs(Steering));
-    const float YawAssist = FMath::Clamp((TargetYaw - Yaw) * 5.f, -3.8f, 3.8f);
-    Mesh->AddTorqueInRadians(FVector(0,0,YawAssist * Duty), NAME_None, true);
 }
 
 void AVehicleClock::SetWheelHandling(float GripBonus,float BrakeBonus,float RearSlip)
@@ -493,7 +450,19 @@ void AVehicleClock::UpdateHandling(float DeltaSeconds)
     const bool Grounded = Contacts >= 2 && Car->GetActorUpVector().Z > .45f;
     const float Steering = Move->GetModifiedSteeringInput();
     UpdateBoost(DeltaSeconds, Steering, Grounded);
+    UpdateAirControl(DeltaSeconds, Contacts);
+    UpdateLanding(DeltaSeconds, Grounded);
     SetWheelHandling(.12f*Handling.Grip*WheelBlend,.15f*Handling.Brakes*WheelBlend,FMath::RoundToFloat(DriftBlend*32.f)/32.f);
+    if (Grounded && Applied > 1.f && Handling.Steering > 0 && DriftBlend < .05f && Speed > 300.f)
+    {
+        const FVector Right = Car->GetActorRightVector().GetSafeNormal2D();
+        const float Yaw = Mesh->GetPhysicsAngularVelocityInRadians().Z;
+        const float TargetYaw = Steering * FMath::Clamp(1200.f / Speed, .25f, 1.2f);
+        const float Assist = FMath::Clamp((TargetYaw - Yaw) * Handling.Steering, -2.f, 2.f);
+        Mesh->AddTorqueInRadians(FVector(0, 0, Assist), NAME_None, true);
+        const float Correction = FMath::Clamp(TargetYaw * Speed - FVector::DotProduct(Velocity, Right) * 2.f, -900.f, 900.f);
+        Mesh->AddForce(Right * Correction * (.12f * Handling.Steering), NAME_None, true);
+    }
     if (!Grounded || (Blend <= 0.f && DriftBlend <= 0.f)) return;
     const float Gravity=FMath::Abs(GetWorld()->GetGravityZ());
     const FVector Forward=Car->GetActorForwardVector().GetSafeNormal2D();

@@ -105,7 +105,7 @@ TSharedRef<SWidget> UVehicleFuelSlot::RebuildWidget()
     auto Info = SNew(SVerticalBox);
     Info->AddSlot().AutoHeight()[SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Bold",bHUD ? 11 : 16))
         .ColorAndOpacity(bHUD ? FLinearColor::White : Orange)
-        .Text(FText::FromString(bHUD ? TEXT("Boost") : VehicleFamily(Vehicle.Get()) == EVehicleFamily::Tractor ? TEXT("Forward rocket fuel") : TEXT("Drift booster fuel")))];
+        .Text(FText::FromString(bHUD ? TEXT("Boost") : VehicleFamily(Vehicle.Get()) == EVehicleFamily::Tractor ? TEXT("Forward rocket fuel") : TEXT("Booster fuel")))];
     if (!bHUD)
     {
         Info->AddSlot().AutoHeight().Padding(0,3)

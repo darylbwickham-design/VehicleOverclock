@@ -1,8 +1,8 @@
 {
   "FileVersion": 3,
   "Version": 0,
-  "VersionName": "0.2.0-alpha.5",
-  "SemVersion": "0.2.0-alpha.5",
+  "VersionName": "0.9.1",
+  "SemVersion": "0.9.1",
   "GameVersion": ">=520140 <520141",
   "FriendlyName": "Vehicle Overclock",
   "Description": "Vehicle Overclock is an unstable public testing alpha. Expect bugs. No support is available at this stage.",

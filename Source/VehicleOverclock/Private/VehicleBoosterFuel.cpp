@@ -77,9 +77,12 @@ void UVehicleClockRemote::TransferFuel_Implementation(AFGVehicle* Target, int32 
         FInventoryStack Stack;
         if (!Inventory->GetStackFromIndex(SourceSlot, Stack) || Stack.Item.GetItemClass() != Item || Stack.NumItems <= 0) return;
         const auto Ranks = FVehicleHandlingRanks::Read(GetWorld(), Target);
-        if (!Ranks.bDrift && !Ranks.bRocket)
+        if (!Ranks.bDrift && !Ranks.bRocket && !Ranks.bAirThruster)
         {
-            Feedback(Target, VehicleFamily(Target) == EVehicleFamily::Tractor ? TEXT("Research Tractor · Forward rocket at the MAM.") : TEXT("Research Controlled drift at the MAM."));
+            const auto Family = VehicleFamily(Target);
+            Feedback(Target, Family == EVehicleFamily::Tractor ? TEXT("Research Tractor · Forward rocket at the MAM.") :
+                Family == EVehicleFamily::Explorer ? TEXT("Research Controlled drift or Explorer · Air thrusters at the MAM.") :
+                TEXT("Research Controlled drift at the MAM."));
             return;
         }
         if (Clock && Clock->FuelCount && Clock->FuelType != Item)

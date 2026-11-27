@@ -66,6 +66,7 @@ public:
     void RefreshBoosterStack();
     void ClearShardOwner();
     void RequestDrift(bool Held);
+    void RequestFlight(FVector2D Axes, bool Modifier);
     void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     bool ShouldSave_Implementation() const override;
     bool NeedTransform_Implementation() override { return false; }
@@ -81,6 +82,8 @@ public:
     UPROPERTY(SaveGame, Replicated) TSubclassOf<UFGItemDescriptor> BurningType;
     UPROPERTY(SaveGame, Replicated) float FuelCharge = 0.f;
     UPROPERTY(Replicated) int8 ThrustDirection = 0; // -1/1 for drift, 2 for forward thrust
+    UPROPERTY(Replicated) FVector2D FlightAxes = FVector2D::ZeroVector;
+    UPROPERTY(Replicated) bool bAirModifier = false;
     UPROPERTY(SaveGame, Replicated) int32 Percent = VehicleClock::Stock;
 
 private:
@@ -101,6 +104,13 @@ private:
     float MeterBooster(float Seconds);
     float DriftEntrySpeed = 0.f;
     void UpdateBoost(float Seconds, float Steering, bool Grounded);
+    void UpdateAirControl(float Seconds, int32 Contacts);
+    void UpdateLanding(float Seconds, bool Grounded);
+    bool HasRacingControls() const { return Handling.AirControl > 0 || Handling.Landing > 0; }
+    float FlightInputAge = 0.f;
+    float AirTime = 0.f;
+    float LandingTime = 0.f;
+    bool bWasAirborne = false;
     UPROPERTY(Replicated) bool bDriftHeld = false;
     float DriftBlend = 0.f, LastRearSlip = 0.f;
     int32 BallastRank = 0;
@@ -135,6 +145,7 @@ public:
     UFUNCTION(Server, Reliable) void Edit(AFGVehicle* ExpectedVehicle, EClockEdit Operation, int32 Value);
     UFUNCTION(Server, Reliable) void TransferFuel(AFGVehicle* Vehicle, int32 SourceSlot, TSubclassOf<UFGItemDescriptor> Item, bool Unload);
     UFUNCTION(Server, Reliable) void Drift(AFGVehicle* ExpectedVehicle, bool Held);
+    UFUNCTION(Server, Unreliable) void Flight(AFGVehicle* ExpectedVehicle, FVector2D Axes, bool Modifier);
     UFUNCTION(Client, Reliable) void Feedback(AFGVehicle* ExpectedVehicle, const FString& Message);
     void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     UPROPERTY(Replicated) bool bReady = true;

@@ -25,6 +25,11 @@ struct FVehicleHandlingRanks
     int32 Efficiency = 0;
     bool bDrift = false;
     bool bRocket = false;
+    int32 DriftControl = 0;
+    int32 AirControl = 0;
+    int32 Landing = 0;
+    bool bDriftExit = false;
+    bool bAirThruster = false;
     static FVehicleHandlingRanks Read(UWorld* World, const AFGVehicle* Vehicle);
     static bool OverclockUnlocked(UWorld* World);
 };
@@ -230,6 +235,67 @@ class UExplorerSteeringII : public UVehicleHandlingSchematic
 
 UCLASS()
 class UExplorerSteeringIII : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
+UCLASS()
+class UExplorerDriftI : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+UCLASS()
+class UExplorerDriftII : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+UCLASS()
+class UExplorerDriftExit : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+UCLASS()
+class UExplorerAirI : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+UCLASS()
+class UExplorerAirII : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+UCLASS()
+class UExplorerAirIII : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+UCLASS()
+class UExplorerAirThruster : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+UCLASS()
+class UExplorerLandingI : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+UCLASS()
+class UExplorerLandingII : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+UCLASS()
+class UTractorAirI : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+UCLASS()
+class UTractorAirII : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+UCLASS()
+class UTractorAirIII : public UVehicleHandlingSchematic
 {
     GENERATED_BODY()
 };
