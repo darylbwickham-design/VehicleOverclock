@@ -8,6 +8,11 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "VehicleHandlingResearch.generated.h"
 
+class AFGVehicle;
+
+enum class EVehicleFamily : uint8 { Other, Tractor, Explorer, Truck, Rail };
+EVehicleFamily VehicleFamily(const AFGVehicle* Vehicle);
+
 struct FVehicleHandlingRanks
 {
     int32 Grip = 0;
@@ -15,7 +20,13 @@ struct FVehicleHandlingRanks
     int32 Brakes = 0;
     bool bCalibrated = false;
     bool bStability = false;
-    static FVehicleHandlingRanks Read(UWorld* World);
+    int32 Ballast = 0;
+    int32 Steering = 0;
+    int32 Efficiency = 0;
+    bool bDrift = false;
+    bool bRocket = false;
+    static FVehicleHandlingRanks Read(UWorld* World, const AFGVehicle* Vehicle);
+    static bool OverclockUnlocked(UWorld* World);
 };
 
 UCLASS()
@@ -109,6 +120,120 @@ class UVehicleStability : public UVehicleHandlingSchematic
 {
     GENERATED_BODY()
 };
+UCLASS()
+class UTractorWorks : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
+UCLASS()
+class UExplorerWorks : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
+UCLASS()
+class UExplorerBallast : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
+UCLASS()
+class UExplorerDampers : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
+UCLASS()
+class UExplorerBrakes : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
+UCLASS()
+class UExplorerStability : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
+UCLASS()
+class UTruckWorks : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
+UCLASS()
+class UTruckGrip : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
+UCLASS()
+class UTruckBrakes : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
+UCLASS()
+class UTruckStability : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
+UCLASS()
+class UVehicleDrift : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
+UCLASS()
+class UTractorRocket : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
+UCLASS()
+class UFleetEfficiencyI : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
+UCLASS()
+class UFleetEfficiencyII : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
+UCLASS()
+class UFleetEfficiencyIII : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
+UCLASS()
+class UFleetEfficiencyIV : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
+UCLASS()
+class UExplorerSteeringI : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
+UCLASS()
+class UExplorerSteeringII : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
+UCLASS()
+class UExplorerSteeringIII : public UVehicleHandlingSchematic
+{
+    GENERATED_BODY()
+};
+
 UCLASS()
 class UVehicleHandlingTree : public UFGResearchTree
 {

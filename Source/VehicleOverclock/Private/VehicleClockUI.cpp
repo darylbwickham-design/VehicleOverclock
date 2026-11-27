@@ -1,4 +1,9 @@
 #include "VehicleClockUI.h"
+#include "VehicleDriftInput.h"
+#include "Framework/Application/IInputProcessor.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Layout/WidgetPath.h"
+#include "Slate/SObjectWidget.h"
 #include "FGCharacterPlayer.h"
 #include "FGHUD.h"
 #include "FGLocomotive.h"
@@ -22,6 +27,29 @@
 
 namespace
 {
+    class FFuelQuickTransfer final : public IInputProcessor
+    {
+    public:
+        explicit FFuelQuickTransfer(UVehicleClockHUD* Owner) : HUD(Owner) {}
+        void Tick(float, FSlateApplication&, TSharedRef<ICursor>) override {}
+        bool HandleMouseButtonDownEvent(FSlateApplication& App, const FPointerEvent& Event) override
+        {
+            if (!Event.IsShiftDown() || Event.GetEffectingButton() != EKeys::LeftMouseButton) return false;
+            auto* Page = HUD.IsValid() ? HUD->ActiveFuelPage() : nullptr;
+            if (!Page) return false;
+            const auto Path = App.LocateWindowUnderMouse(Event.GetScreenSpacePosition(), App.GetInteractiveTopLevelWindows());
+            for (int32 I = Path.Widgets.Num() - 1; I >= 0; --I)
+            {
+                const auto Widget = Path.Widgets[I].Widget;
+                if (Widget->GetType() == TEXT("SObjectWidget") &&
+                    Page->TransferFrom(StaticCastSharedRef<SObjectWidget>(Widget)->GetWidgetObject(), true)) return true;
+            }
+            return false;
+        }
+    private:
+        TWeakObjectPtr<UVehicleClockHUD> HUD;
+    };
+
     const FLinearColor Amber(1.f, 0.42f, 0.046f);
 
     auto Label(const FString& Text, int32 Size, const FLinearColor Color = FLinearColor::White)
@@ -105,7 +133,7 @@ void UVehicleClockPage::NativeTick(const FGeometry& Geometry,float DeltaSeconds)
     UntilRefresh-=DeltaSeconds;
     if(UntilRefresh<=0.f)
     {
-        Learned=FVehicleHandlingRanks::Read(GetWorld());
+        Learned=FVehicleHandlingRanks::Read(GetWorld(),Vehicle);
         UntilRefresh=1.f;
     }
 }
@@ -145,30 +173,43 @@ TSharedRef<SWidget> UVehicleClockPage::RebuildWidget()
     Rows->AddSlot().AutoHeight().Padding(12,16,12,0)
     [SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Bold",15)).Text_Lambda([this] {
         if (!Vehicle) return FText::GetEmpty();
-        const float Rate=VehicleClock::Energy(Clock()/100.f);
+        const float Rate=VehicleClock::Energy(Clock()/100.f, Learned.Efficiency);
         if (Vehicle->IsA<AFGLocomotive>())
-            return FText::FromString(FString::Printf(TEXT("Rail power    %.2f×"),Rate));
+            return FText::FromString(FString::Printf(TEXT("Rail power    %.2f×     Fleet efficiency    %d / 4"),Rate,Learned.Efficiency));
         if (!VehicleClock::NeedsFuel(Vehicle)) return FText::FromString(TEXT("Fuel-free"));
-        return FText::FromString(FString::Printf(TEXT("Fuel burn rate    %.2f×"),Rate));
+        return FText::FromString(FString::Printf(TEXT("Fuel burn rate    %.2f×     Fleet efficiency    %d / 4"),Rate,Learned.Efficiency));
     })];
-    Rows->AddSlot().AutoHeight().Padding(12,20,12,5)[Label(TEXT("Vehicle Handling"),15,Amber)];
+    Rows->AddSlot().AutoHeight().Padding(12,20,12,5)[Label(TEXT("Vehicle Engineering"),15,Amber)];
     Rows->AddSlot().AutoHeight().Padding(12,0)
     [SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Regular",13)).Text_Lambda([this] {
-        if (!Learned.bCalibrated) return FText::FromString(TEXT("Chassis calibration available at the MAM"));
-        if (Vehicle && Vehicle->IsA<AFGLocomotive>())
-            return FText::FromString(FString::Printf(TEXT("Air braking    %d / 3"),Learned.Brakes));
-        return FText::FromString(FString::Printf(TEXT("Tyre grip    %d / 3     Downforce    %d / 3     Braking    %d / 3\nStability control    %s"),
-            Learned.Grip,Learned.Aero,Learned.Brakes,Learned.bStability?TEXT("Installed"):TEXT("Locked")));
+        if (!Learned.bCalibrated) return FText::FromString(TEXT("Research Vehicle overclocking at the MAM to fit Power Shards."));
+        if (VehicleFamily(Vehicle) == EVehicleFamily::Explorer)
+            return FText::FromString(FString::Printf(TEXT("Explorer ballast    %d / 3     Steering rack    %d / 3\nRally stabiliser    %s     Controlled drift    %s"),
+                Learned.Ballast,Learned.Steering,Learned.bStability?TEXT("Installed"):TEXT("Locked"),Learned.bDrift?TEXT("Available"):TEXT("Locked")));
+        if (VehicleFamily(Vehicle) == EVehicleFamily::Other || VehicleFamily(Vehicle) == EVehicleFamily::Rail)
+            return FText::FromString(TEXT("Fleet overclocking unlocked"));
+        const FString Booster = VehicleFamily(Vehicle) == EVehicleFamily::Tractor
+            ? FString::Printf(TEXT("Forward rocket    %s"), Learned.bRocket ? TEXT("Installed") : TEXT("Locked"))
+            : FString::Printf(TEXT("Controlled drift    %s"), Learned.bDrift ? TEXT("Available") : TEXT("Locked"));
+        return FText::FromString(FString::Printf(TEXT("Tyre grip    %d / 3     Downforce    %d / 3     Braking    %d / 3\nStability control    %s     %s"),
+            Learned.Grip,Learned.Aero,Learned.Brakes,Learned.bStability?TEXT("Installed"):TEXT("Locked"),*Booster));
     })];
     Rows->AddSlot().AutoHeight().Padding(12,14)[SNew(STextBlock).ColorAndOpacity(Amber).AutoWrapText(true)
         .Text_Lambda([this]{auto* PC=Cast<AFGPlayerController>(GetOwningPlayer());
             auto* R=PC?PC->GetRemoteCallObjectOfClass<UVehicleClockRemote>():nullptr;
             return FText::FromString(R && R->FeedbackVehicle==Vehicle ? R->LastMessage : FString());})];
-    return SNew(SBox).WidthOverride(700).HeightOverride(726)
-        [SNew(SOverlay)
+    auto Frame = SNew(SOverlay)
         + SOverlay::Slot()[SNew(SImage).Visibility(EVisibility::HitTestInvisible).Image(&MachineBrush)]
         + SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Top).Padding(0,112,0,0)
-          [SNew(SBox).WidthOverride(540)[Rows]]];
+          [SNew(SBox).WidthOverride(540)[Rows]];
+    if (!bDetails && VehicleClock::SupportsBooster(Vehicle))
+    {
+        FuelSlot = CreateWidget<UVehicleFuelSlot>(GetOwningPlayer());
+        FuelSlot->Configure(Vehicle, this);
+        Frame->AddSlot().HAlign(HAlign_Center).VAlign(VAlign_Bottom).Padding(0,0,0,78)
+            [SNew(SBox).WidthOverride(516).HeightOverride(116)[FuelSlot->TakeWidget()]];
+    }
+    return SNew(SBox).WidthOverride(700).HeightOverride(726)[Frame];
 }
 
 void UVehicleClockHUD::RegenerateTabs(int32 Selected)
@@ -229,6 +270,11 @@ bool UVehicleClockHUD::Attach(UFGInteractWidget* Host, AFGVehicle* Target)
     Row->AddChildToHorizontalBox(Page);
     AddDefinition(H,TEXT("Overclocking"),Icon);
     RegenerateTabs(Selected);
+    if (VehicleClock::SupportsBooster(Target) && FSlateApplication::IsInitialized())
+    {
+        FuelInput = MakeShared<FFuelQuickTransfer>(this);
+        FSlateApplication::Get().RegisterInputPreProcessor(FuelInput, 0);
+    }
 
     // Some trunks enable an extra craft bench. Keep its native page index, but
     // put Overclocking in the third visible header position.
@@ -251,8 +297,21 @@ bool UVehicleClockHUD::Attach(UFGInteractWidget* Host, AFGVehicle* Target)
     return true;
 }
 
+UVehicleClockPage* UVehicleClockHUD::ActiveFuelPage() const
+{
+    if (!Pages || !Slider || !Menu.IsValid() || !VehicleClock::SupportsBooster(Vehicle.Get())) return nullptr;
+    auto* PC = Cast<AFGPlayerController>(Menu->GetOwningPlayer());
+    auto* UI = PC ? PC->GetGameUI() : nullptr;
+    if (!UI) return nullptr;
+    auto Stack = UI->GetInteractWidgetStack();
+    if (Stack.IsEmpty() || Stack.Last() != Menu.Get() || Index(Slider) != Pages->GetChildrenCount()-1) return nullptr;
+    return Cast<UVehicleClockPage>(Pages->GetChildAt(Index(Slider)));
+}
+
 void UVehicleClockHUD::Detach()
 {
+    if (FuelInput && FSlateApplication::IsInitialized()) FSlateApplication::Get().UnregisterInputPreProcessor(FuelInput);
+    FuelInput.Reset();
     if (Headers && Slider && Pages)
     {
         const int32 Selected=FMath::Clamp(Index(Slider),0,InitialPageCount-1);
@@ -278,6 +337,20 @@ void UVehicleClockHUD::Tick(float)
     auto* UI=PC && PC->IsLocalController()? PC->GetGameUI():nullptr;
     if (!UI) { if(Headers) Detach(); return; }
     const auto Stack=UI->GetInteractWidgetStack();
+    auto* Driven = VehicleClock::DrivenBy(PC);
+    bool JustPressed = false;
+    const bool Pressed = Driven && Stack.IsEmpty() && !PC->bShowMouseCursor && VehicleDriftInput::IsHeld(PC, JustPressed);
+    UpdateFuelHUD(PC, Driven, !Stack.IsEmpty());
+    if (Pressed != bDriftPressed || DriftVehicle.Get() != Driven)
+    {
+        if (auto* Remote = PC->GetRemoteCallObjectOfClass<UVehicleClockRemote>())
+        {
+            if (bDriftPressed && DriftVehicle.IsValid()) Remote->Drift(DriftVehicle.Get(),false);
+            if (Pressed) Remote->Drift(Driven,true);
+            bDriftPressed = Pressed;
+            DriftVehicle = Driven;
+        }
+    }
     if (Headers && bOpenedWhileDriving && VehicleClock::DrivenBy(PC)!=Vehicle.Get() && Stack.Contains(Menu.Get()))
     {
         auto* Leaving=Menu.Get();
@@ -304,6 +377,8 @@ void UVehicleClockHUD::Tick(float)
 
 void UVehicleClockHUD::Deinitialize()
 {
+    if (FuelHUD) FuelHUD->RemoveFromParent();
+    FuelHUD = nullptr;
     Detach();
     Super::Deinitialize();
 }

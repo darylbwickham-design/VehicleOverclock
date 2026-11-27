@@ -6,7 +6,10 @@
 #include "VehicleClock.h"
 #include "VehicleClockUI.generated.h"
 
+class IInputProcessor;
 class UFGInteractWidget;
+class UVehicleFuelSlot;
+
 class UHorizontalBox;
 class UNamedSlot;
 class USlider;
@@ -36,6 +39,7 @@ class UVehicleClockPage : public UUserWidget
     GENERATED_BODY()
 public:
     void Configure(AFGVehicle* InVehicle, bool ShowDetails);
+    bool TransferFrom(UObject* SourceSlot, bool Commit);
 protected:
     TSharedRef<SWidget> RebuildWidget() override;
     void NativeTick(const FGeometry& Geometry,float DeltaSeconds) override;
@@ -53,6 +57,7 @@ private:
     int32 Slots() const;
     int32 Clock() const;
     UPROPERTY(Transient) TObjectPtr<AFGVehicle> Vehicle;
+    UPROPERTY(Transient) TObjectPtr<UVehicleFuelSlot> FuelSlot;
     UPROPERTY(Transient) FSlateBrush MachineBrush;
     UPROPERTY(Transient) TObjectPtr<UUserWidget> Machine;
     UPROPERTY(Transient) TObjectPtr<USlider> ClockSlider;
@@ -66,6 +71,30 @@ private:
 };
 
 UCLASS()
+class UVehicleFuelSlot : public UUserWidget
+{
+    GENERATED_BODY()
+public:
+    void Configure(AFGVehicle* Target, UVehicleClockPage* Host);
+protected:
+    TSharedRef<SWidget> RebuildWidget() override;
+    void NativeTick(const FGeometry&, float Seconds) override;
+    bool NativeOnDragOver(const FGeometry&, const FDragDropEvent&, UDragDropOperation*) override;
+    bool NativeOnDrop(const FGeometry&, const FDragDropEvent&, UDragDropOperation*) override;
+    FReply NativeOnMouseButtonDown(const FGeometry&, const FPointerEvent&) override;
+private:
+    TWeakObjectPtr<AFGVehicle> Vehicle;
+    TWeakObjectPtr<UVehicleClockPage> Page;
+    TWeakObjectPtr<AVehicleClock> Clock;
+    UPROPERTY(Transient) FSlateBrush ItemBrush;
+    UPROPERTY(Transient) FSlateBrush SocketBrush;
+    UPROPERTY(Transient) TObjectPtr<UClass> ShownItem;
+    UPROPERTY(Transient) TObjectPtr<UTexture2D> EmptyIcon;
+    float SearchIn = 0.f;
+    bool bHUD = false;
+};
+
+UCLASS()
 class UVehicleClockHUD : public UTickableWorldSubsystem
 {
     GENERATED_BODY()
@@ -73,9 +102,14 @@ public:
     void Tick(float DeltaTime) override;
     TStatId GetStatId() const override { RETURN_QUICK_DECLARE_CYCLE_STAT(UVehicleClockHUD, STATGROUP_Tickables); }
     void Deinitialize() override;
+    UVehicleClockPage* ActiveFuelPage() const;
 private:
     bool Attach(UFGInteractWidget* Host, AFGVehicle* Target);
     void Detach();
+    void UpdateFuelHUD(APlayerController* PC, AFGVehicle* Driven, bool InMenu);
+    UPROPERTY(Transient) TObjectPtr<UVehicleFuelSlot> FuelHUD;
+    TWeakObjectPtr<AFGVehicle> HUDVehicle;
+    TSharedPtr<IInputProcessor> FuelInput;
     void RegenerateTabs(int32 Selected);
     TWeakObjectPtr<UFGInteractWidget> Menu;
     TWeakObjectPtr<AFGVehicle> Vehicle;
@@ -86,5 +120,7 @@ private:
     UPROPERTY(Transient) TObjectPtr<UWidget> OriginalBody;
     int32 InitialDefinitions = 0;
     int32 InitialPageCount = 0;
+    TWeakObjectPtr<AFGVehicle> DriftVehicle;
+    bool bDriftPressed = false;
     bool bOpenedWhileDriving = false;
 };

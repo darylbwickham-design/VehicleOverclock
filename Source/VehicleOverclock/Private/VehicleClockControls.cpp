@@ -171,7 +171,7 @@ void UVehicleClockPage::RefreshControls(bool Force)
     if (Force || !PercentInput->HasKeyboardFocus())
         PercentInput->SetText(FText::FromString(FString::Printf(TEXT("%d%%"),P)));
     if (Force || !SpeedInput->HasKeyboardFocus())
-        SpeedInput->SetText(FText::FromString(FString::Printf(TEXT("%.2f"),VehicleClock::Speed(Ratio))));
+        SpeedInput->SetText(FText::FromString(FString::Printf(TEXT("%.2f"),VehicleClock::Speed(Ratio,Vehicle))));
     auto* Bar=Part<UImage>(Machine,TEXT("mProgressBar"))->GetDynamicMaterial();
     if (Bar)
     {
@@ -217,6 +217,6 @@ void UVehicleClockPage::CommitSpeed(const FText& Text,ETextCommit::Type How)
 {
     float Value;
     if (How!=ETextCommit::OnCleared && FDefaultValueHelper::ParseFloat(Text.ToString(),Value) && FMath::IsFinite(Value))
-        Edit(EClockEdit::SetPercent,FMath::RoundToInt(100.f+(FMath::Clamp(Value,1.f,1.9f)-1.f)*100.f/0.6f));
+        Edit(EClockEdit::SetPercent,FMath::RoundToInt(100.f*VehicleClock::ClockForSpeed(Value,Vehicle)));
     RefreshControls(true);
 }

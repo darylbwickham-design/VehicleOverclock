@@ -1,6 +1,11 @@
 #include "VehicleHandlingResearch.h"
+#include "VehicleDriftInput.h"
 
 #include "UObject/StrongObjectPtr.h"
+#include "FGVehicle.h"
+#include "FGLocomotive.h"
+#include "ImageUtils.h"
+#include "Interfaces/IPluginManager.h"
 
 #include "FGSchematicManager.h"
 #include "Resources/FGItemDescriptor.h"
@@ -27,24 +32,123 @@ namespace
         float Seconds;
         FIntPoint Position;
         TArray<int32> Parents;
+        const TCHAR* Icon;
+        TArray<FIntPoint> Waypoints = {};
     };
 
     const TArray<FUpgrade>& Upgrades()
     {
         static const TArray<FUpgrade> All = {
-            {UVehicleCalibration::StaticClass(),TEXT("Chassis calibration"),TEXT("Enables speed-sensitive handling on manually overclocked road vehicles. Dampens excessive yaw when the tyres are in contact."),TEXT("IronPlate"),20,TEXT("Wire"),30,15,{2,0},{}},
-            {UVehicleGripI::StaticClass(),TEXT("Tyre grip I"),TEXT("Increases high-speed tyre grip by up to 12%."),TEXT("IronScrew"),40,TEXT("IronPlate"),8,20,{0,2},{0}},
-            {UVehicleGripII::StaticClass(),TEXT("Tyre grip II"),TEXT("Raises the high-speed grip bonus to 24%."),TEXT("Rotor"),4,TEXT("SteelPipe"),12,35,{0,4},{1}},
-            {UVehicleGripIII::StaticClass(),TEXT("Tyre grip III"),TEXT("Raises the high-speed grip bonus to 36%."),TEXT("Rubber"),30,TEXT("Motor"),3,60,{0,6},{2}},
-            {UVehicleAeroI::StaticClass(),TEXT("Downforce I"),TEXT("Adds up to 8% of the vehicle's weight as extra tyre loading near the road."),TEXT("CopperSheet"),12,TEXT("IronRod"),16,20,{2,2},{0}},
-            {UVehicleAeroII::StaticClass(),TEXT("Downforce II"),TEXT("Raises additional high-speed tyre loading to 16% of vehicle weight."),TEXT("IronPlateReinforced"),6,TEXT("SteelPipe"),12,35,{2,4},{4}},
-            {UVehicleAeroIII::StaticClass(),TEXT("Downforce III"),TEXT("Raises additional high-speed tyre loading to 24% of vehicle weight."),TEXT("ModularFrame"),6,TEXT("Rubber"),24,60,{2,6},{5}},
-            {UVehicleBrakesI::StaticClass(),TEXT("Braking I"),TEXT("Adds up to 15% service-brake torque plus 0.18 m/s² of lift-off deceleration. Also improves locomotive air brakes."),TEXT("IronPlate"),12,TEXT("Cable"),10,20,{4,2},{0}},
-            {UVehicleBrakesII::StaticClass(),TEXT("Braking II"),TEXT("Raises braking assistance to 30% and lift-off deceleration to 0.36 m/s²."),TEXT("Stator"),4,TEXT("SteelPipe"),12,35,{4,4},{7}},
-            {UVehicleBrakesIII::StaticClass(),TEXT("Braking III"),TEXT("Raises braking assistance to 45% and lift-off deceleration to 0.54 m/s²."),TEXT("Motor"),3,TEXT("Rubber"),24,60,{4,6},{8}},
-            {UVehicleStability::StaticClass(),TEXT("Electronic stability control"),TEXT("Uses the steering input and sideways slip to damp excessive yaw and roll in high-speed road turns."),TEXT("CircuitBoard"),8,TEXT("Motor"),4,90,{2,8},{3,6,9}}
+            {UVehicleCalibration::StaticClass(), TEXT("Vehicle overclocking"),
+                TEXT("Unlock Power Shard tuning for every vehicle with a control panel. Each shard adds 50% clock capacity. Select a chassis below to research its handling."),
+                TEXT("IronPlate"), 20, TEXT("Wire"), 30, 15, {3,0}, {}, TEXT("clock")},
+            {UTractorWorks::StaticClass(), TEXT("Tractor chassis"),
+                TEXT("Open the Tractor workshop. Choose tyre grip, downforce and braking in any order, then combine all three for stability control."),
+                TEXT("IronPlate"), 8, TEXT("IronRod"), 12, 10, {1,2}, {0}, TEXT("tractor"), {{2,0},{1,1}}},
+            {UVehicleGripI::StaticClass(), TEXT("Tractor · Tyre grip I"),
+                TEXT("Increase high-speed tyre grip by 12%."),
+                TEXT("IronScrew"), 40, TEXT("IronPlate"), 8, 20, {0,3}, {1}, TEXT("tractor_grip1"), {{0,2}}},
+            {UVehicleGripII::StaticClass(), TEXT("Tractor · Tyre grip II"),
+                TEXT("Increase high-speed tyre grip to 24%."),
+                TEXT("Rotor"), 4, TEXT("SteelPipe"), 12, 35, {0,4}, {2}, TEXT("tractor_grip2")},
+            {UVehicleGripIII::StaticClass(), TEXT("Tractor · Tyre grip III"),
+                TEXT("Increase high-speed tyre grip to 36%."),
+                TEXT("Rubber"), 30, TEXT("Motor"), 3, 60, {0,5}, {3}, TEXT("tractor_grip3")},
+            {UVehicleAeroI::StaticClass(), TEXT("Tractor · Downforce I"),
+                TEXT("Add up to 8% of chassis weight as downforce at speed."),
+                TEXT("CopperSheet"), 12, TEXT("IronRod"), 16, 20, {1,3}, {1}, TEXT("tractor_aero1")},
+            {UVehicleAeroII::StaticClass(), TEXT("Tractor · Downforce II"),
+                TEXT("Increase high-speed downforce to 16% of chassis weight."),
+                TEXT("IronPlateReinforced"), 6, TEXT("SteelPipe"), 12, 35, {1,4}, {5}, TEXT("tractor_aero2")},
+            {UVehicleAeroIII::StaticClass(), TEXT("Tractor · Downforce III"),
+                TEXT("Increase high-speed downforce to 24% of chassis weight."),
+                TEXT("ModularFrame"), 6, TEXT("Rubber"), 24, 60, {1,5}, {6}, TEXT("tractor_aero3")},
+            {UVehicleBrakesI::StaticClass(), TEXT("Tractor · Brakes I"),
+                TEXT("Add 15% brake torque and 0.18 m/s² of lift-off deceleration at speed."),
+                TEXT("IronPlate"), 12, TEXT("Cable"), 10, 20, {2,3}, {1}, TEXT("tractor_brake1"), {{2,2}}},
+            {UVehicleBrakesII::StaticClass(), TEXT("Tractor · Brakes II"),
+                TEXT("Increase brake assistance to 30% and lift-off deceleration to 0.36 m/s²."),
+                TEXT("Stator"), 4, TEXT("SteelPipe"), 12, 35, {2,4}, {8}, TEXT("tractor_brake2")},
+            {UVehicleBrakesIII::StaticClass(), TEXT("Tractor · Brakes III"),
+                TEXT("Increase brake assistance to 45% and lift-off deceleration to 0.54 m/s²."),
+                TEXT("Motor"), 3, TEXT("Rubber"), 24, 60, {2,5}, {9}, TEXT("tractor_brake3")},
+            {UVehicleStability::StaticClass(), TEXT("Tractor · Stability control"),
+                TEXT("Combine grip, downforce and braking to settle body roll and catch a rear slide in fast corners."),
+                TEXT("CircuitBoard"), 8, TEXT("Motor"), 4, 90, {1,6}, {4,7,10}, TEXT("tractor_stability")},
+            {UExplorerWorks::StaticClass(), TEXT("Explorer chassis"),
+                TEXT("Open the Explorer workshop. All-terrain tyres improve grip and a small amount of downforce keeps the wheels planted."),
+                TEXT("Rotor"), 2, TEXT("Rubber"), 8, 15, {3,2}, {0}, TEXT("explorer"), {{3,1}}},
+            {UExplorerBallast::StaticClass(), TEXT("Explorer · Belly ballast"),
+                TEXT("Mount ballast under the floor. The overclocked Explorer gains 6% sprung mass and a lower centre of gravity."),
+                TEXT("ModularFrame"), 3, TEXT("SteelPipe"), 12, 25, {3,3}, {12}, TEXT("explorer_ballast")},
+            {UExplorerDampers::StaticClass(), TEXT("Explorer · Roll dampers"),
+                TEXT("Control roll and rebound on uneven ground. Increase low-mounted ballast to 10% and improve high-speed tyre loading."),
+                TEXT("Stator"), 3, TEXT("Rubber"), 16, 35, {3,4}, {13}, TEXT("explorer_spring")},
+            {UExplorerBrakes::StaticClass(), TEXT("Explorer · Rally brakes"),
+                TEXT("Fit the full brake package for 45% more brake torque and stronger lift-off deceleration at high speed."),
+                TEXT("Motor"), 2, TEXT("CopperSheet"), 16, 45, {3,5}, {14}, TEXT("explorer_brake")},
+            {UExplorerStability::StaticClass(), TEXT("Explorer · Rally stabiliser"),
+                TEXT("Bring low-mounted ballast to 14%. Catch excessive yaw and sideways slip, and settle the chassis after a hard turn."),
+                TEXT("CircuitBoard"), 4, TEXT("Motor"), 3, 60, {3,6}, {15}, TEXT("explorer_stability")},
+            {UTruckWorks::StaticClass(), TEXT("Truck chassis"),
+                TEXT("Open the Truck workshop. Heavy-haul research applies to the Truck and Fluid Freight Truck."),
+                TEXT("SteelPipe"), 10, TEXT("IronPlate"), 15, 15, {5,2}, {0}, TEXT("truck"), {{4,0},{5,1}}},
+            {UTruckGrip::StaticClass(), TEXT("Truck · Haul tyres"),
+                TEXT("Fit high-load tyres and add speed-sensitive downforce for loaded turns."),
+                TEXT("Rubber"), 20, TEXT("SteelPipe"), 12, 25, {5,3}, {17}, TEXT("truck_grip")},
+            {UTruckBrakes::StaticClass(), TEXT("Truck · Brake servo"),
+                TEXT("Improve service braking and lift-off deceleration at speed."),
+                TEXT("Stator"), 4, TEXT("CopperSheet"), 12, 35, {5,4}, {18}, TEXT("truck_brake")},
+            {UTruckStability::StaticClass(), TEXT("Truck · Load stabiliser"),
+                TEXT("Complete the truck grip, downforce and brake package. Control roll and yaw in sweeping turns."),
+                TEXT("Motor"), 3, TEXT("CircuitBoard"), 4, 55, {5,5}, {19}, TEXT("truck_stability")},
+            {UVehicleDrift::StaticClass(), TEXT("Controlled drift"),
+                TEXT("Drive above 29 km/h with the tyres on the ground. Steer and hold Boost to push the rear outward while burning sulphur-based booster fuel. Set Boost hotkey in the mod options (default Left Ctrl). Fits Explorers and Trucks."),
+                TEXT("Rotor"), 4, TEXT("Rubber"), 12, 30, {2,1}, {0}, TEXT("drift"), {{2,0}}},
+            {UTractorRocket::StaticClass(), TEXT("Tractor · Forward rocket"),
+                TEXT("Fit a forward thruster to the Tractor. Load compacted coal or packaged turbo, rocket or ionized fuel in the Overclocking tab. Hold Boost to accelerate on the ground. Release to cut thrust."),
+                TEXT("SteelPipe"), 12, TEXT("Rotor"), 4, 30, {0,1}, {1}, TEXT("tractor_rocket")},
+            {UFleetEfficiencyI::StaticClass(), TEXT("Fleet · Efficiency I"),
+                TEXT("Reduce fuel and rail power demand at full overclock to 3.5× stock across the fleet. Partial overclocks also cost less."),
+                TEXT("CopperSheet"), 10, TEXT("IronPlateReinforced"), 2, 20, {6,1}, {0}, TEXT("fleet_1"), {{4,0},{5,1}}},
+            {UFleetEfficiencyII::StaticClass(), TEXT("Fleet · Efficiency II"),
+                TEXT("Reduce fuel and rail power demand at full overclock to 3× stock."),
+                TEXT("SteelPipe"), 12, TEXT("Rotor"), 4, 35, {6,2}, {23}, TEXT("fleet_2")},
+            {UFleetEfficiencyIII::StaticClass(), TEXT("Fleet · Efficiency III"),
+                TEXT("Reduce fuel and rail power demand at full overclock to 2.5× stock."),
+                TEXT("Rubber"), 20, TEXT("Stator"), 4, 45, {6,3}, {24}, TEXT("fleet_3")},
+            {UFleetEfficiencyIV::StaticClass(), TEXT("Fleet · Efficiency IV"),
+                TEXT("Reduce fuel and rail power demand at full overclock to 2× stock. Driving at stock clock still uses the standard rate."),
+                TEXT("CircuitBoard"), 6, TEXT("Motor"), 4, 60, {6,4}, {25}, TEXT("fleet_4")},
+            {UExplorerSteeringI::StaticClass(), TEXT("Explorer · Steering rack I"),
+                TEXT("Add 10% steering lock to the overclocked Explorer for tighter turns."),
+                TEXT("IronRod"), 16, TEXT("Rotor"), 2, 20, {4,3}, {12}, TEXT("explorer_steer1"), {{4,2}}},
+            {UExplorerSteeringII::StaticClass(), TEXT("Explorer · Steering rack II"),
+                TEXT("Add 20% steering lock to the overclocked Explorer."),
+                TEXT("SteelPipe"), 12, TEXT("Rubber"), 10, 35, {4,4}, {27}, TEXT("explorer_steer2")},
+            {UExplorerSteeringIII::StaticClass(), TEXT("Explorer · Steering rack III"),
+                TEXT("Add 30% steering lock to the overclocked Explorer. The stock speed-sensitive steering curve still moderates input at speed."),
+                TEXT("Motor"), 3, TEXT("CircuitBoard"), 4, 55, {4,5}, {28}, TEXT("explorer_steer3")}
         };
         return All;
+    }
+
+    UTexture2D* ResearchIcon(const TCHAR* Name)
+    {
+        if (IsRunningDedicatedServer()) return nullptr;
+        static TMap<FString, UTexture2D*> Cache;
+        if (auto** Found = Cache.Find(Name)) return *Found;
+        const auto Plugin = IPluginManager::Get().FindPlugin(TEXT("vehiclephysics"));
+        if (!Plugin) return nullptr;
+        const FString File = Plugin->GetBaseDir() / TEXT("Resources/Research") / (FString(Name) + TEXT(".png"));
+        UTexture2D* Image = FImageUtils::ImportFileAsTexture2D(File);
+        if (Image)
+        {
+            Image->LODGroup = TEXTUREGROUP_UI;
+            ResearchObjects().Emplace(Image);
+            Cache.Add(Name, Image);
+        }
+        return Image;
     }
 
     UClass* Part(const TCHAR* Name)
@@ -112,9 +216,9 @@ void UVehicleHandlingSchematic::Configure(const TCHAR* Title,const TCHAR* Descri
 bool UVehicleHandlingTree::Configure()
 {
     if(!mNodes.IsEmpty())return mNodes.Num()==Upgrades().Num();
-    mPreUnlockDisplayName=mDisplayName=FText::FromString(TEXT("Vehicle Handling"));
-    mPreUnlockDescription=mPostUnlockDescription=FText::FromString(TEXT("Research high-speed handling for manually overclocked vehicles."));
-    auto* TreeIcon=UFGItemDescriptor::GetBigIcon(Part(TEXT("Motor")));
+    mPreUnlockDisplayName=mDisplayName=FText::FromString(TEXT("Vehicle Engineering"));
+    mPreUnlockDescription=mPostUnlockDescription=FText::FromString(TEXT("Research fleet-wide overclocking and fuel efficiency, then tune handling and boosters for each chassis."));
+    auto* TreeIcon=ResearchIcon(TEXT("clock"));
     mResearchTreeIcon.SetResourceObject(TreeIcon);mResearchTreeIcon.ImageSize=FVector2D(128,128);
     auto* NodeClass=LoadClass<UFGResearchTreeNode>(nullptr,TEXT("/Game/FactoryGame/Schematics/Research/BPD_ResearchTreeNode.BPD_ResearchTreeNode_C"));
     auto* Data=NodeClass?FindFProperty<FStructProperty>(NodeClass,TEXT("mNodeDataStruct")):nullptr;
@@ -133,7 +237,7 @@ bool UVehicleHandlingTree::Configure()
         TArray<TSubclassOf<UFGSchematic>> Required;
         for(int32 P:U.Parents)Required.Add(All[P].Class);
         U.Class->GetDefaultObject<UVehicleHandlingSchematic>()->Configure(U.Title,U.Description,U.Seconds,
-            {FItemAmount(A,U.AmountA),FItemAmount(B,U.AmountB)},Required,UFGItemDescriptor::GetBigIcon(B));
+            {FItemAmount(A,U.AmountA),FItemAmount(B,U.AmountB)},Required,ResearchIcon(U.Icon));
         auto* N=NewObject<UFGResearchTreeNode>(this,NodeClass);
         void* V=Data->ContainerPtrToValuePtr<void>(N);
         Schematic->SetObjectPropertyValue_InContainer(V,U.Class);
@@ -153,11 +257,9 @@ bool UVehicleHandlingTree::Configure()
             {
                 FScriptArrayHelper Bends(Points,Points->ContainerPtrToValuePtr<void>(Map.GetValuePtr(Entry)));
                 auto* Type=CastFieldChecked<FStructProperty>(Points->Inner);
-                if(From.X!=U.Position.X)
-                {
-                    Point(Type,Bends.GetRawPtr(Bends.AddValue()),{From.X,(From.Y+U.Position.Y)/2});
-                    Point(Type,Bends.GetRawPtr(Bends.AddValue()),{U.Position.X,(From.Y+U.Position.Y)/2});
-                }
+                // The native graph expects each adjacent hex along a road, excluding its source.
+                for (FIntPoint Tile : U.Waypoints)
+                    Point(Type,Bends.GetRawPtr(Bends.AddValue()),Tile);
                 Point(Type,Bends.GetRawPtr(Bends.AddValue()),U.Position);
             }
             Map.Rehash();
@@ -174,6 +276,7 @@ bool UVehicleHandlingTree::Configure()
 void UVehicleHandlingResearch::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
+    VehicleDriftInput::Register();
     const FString Map=GetWorld()->GetMapName();
     if(!GetWorld()->IsGameWorld() || Map.Contains(TEXT("Menu")) || Map.StartsWith(TEXT("Untitled")))return;
     Collection.InitializeDependency<UModContentRegistry>();
@@ -182,20 +285,65 @@ void UVehicleHandlingResearch::Initialize(FSubsystemCollectionBase& Collection)
         Registry->RegisterResearchTree(TEXT("vehiclephysics"),UVehicleHandlingTree::StaticClass());
 }
 
-FVehicleHandlingRanks FVehicleHandlingRanks::Read(UWorld* World)
+EVehicleFamily VehicleFamily(const AFGVehicle* Vehicle)
+{
+    if (!Vehicle) return EVehicleFamily::Other;
+    if (Vehicle->IsA<AFGLocomotive>()) return EVehicleFamily::Rail;
+    static const FName Tractor(TEXT("BP_Tractor_C")), Explorer(TEXT("BP_Explorer_C"));
+    static const FName Truck(TEXT("BP_Truck_C")), FluidTruck(TEXT("BP_FluidTruck_C"));
+    for (auto* Type = Vehicle->GetClass(); Type; Type = Type->GetSuperClass())
+    {
+        const FName Name = Type->GetFName();
+        if (Name == Tractor) return EVehicleFamily::Tractor;
+        if (Name == Explorer) return EVehicleFamily::Explorer;
+        if (Name == Truck || Name == FluidTruck) return EVehicleFamily::Truck;
+    }
+    return EVehicleFamily::Other;
+}
+
+bool FVehicleHandlingRanks::OverclockUnlocked(UWorld* World)
+{
+    auto* Manager = AFGSchematicManager::Get(World);
+    return Manager && Manager->IsSchematicPurchased(UVehicleCalibration::StaticClass());
+}
+
+FVehicleHandlingRanks FVehicleHandlingRanks::Read(UWorld* World, const AFGVehicle* Vehicle)
 {
     FVehicleHandlingRanks R;
-    auto* Manager=AFGSchematicManager::Get(World); if(!Manager)return R;
-    const auto& All=Upgrades();
-    auto Bought=[&](int I){return Manager->IsSchematicPurchased(All[I].Class);};
-    R.bCalibrated=Bought(0); if(!R.bCalibrated)return R;
-    auto Rank=[&](int First){
-        int32 Level=0;
-        while(Level<3 && Bought(First+Level))++Level;
-        return Level;
-    };
-    R.Grip=Rank(1); R.Aero=Rank(4); R.Brakes=Rank(7);
-    R.bStability=R.Grip==3 && R.Aero==3 && R.Brakes==3 && Bought(10);
+    auto* Manager = AFGSchematicManager::Get(World);
+    if (!Manager || !Manager->IsSchematicPurchased(UVehicleCalibration::StaticClass())) return R;
+    R.bCalibrated = true;
+    auto Bought = [Manager](UClass* Type) { return Manager->IsSchematicPurchased(Type); };
+    auto Rank = [&](UClass* I, UClass* II, UClass* III) { return int(Bought(I)) + int(Bought(II)) + int(Bought(III)); };
+    R.Efficiency = Rank(UFleetEfficiencyI::StaticClass(), UFleetEfficiencyII::StaticClass(), UFleetEfficiencyIII::StaticClass())
+        + int(Bought(UFleetEfficiencyIV::StaticClass()));
+    const auto Family = VehicleFamily(Vehicle);
+    if (Family == EVehicleFamily::Tractor)
+    {
+        R.bRocket = Bought(UTractorRocket::StaticClass());
+        R.Grip = Rank(UVehicleGripI::StaticClass(), UVehicleGripII::StaticClass(), UVehicleGripIII::StaticClass());
+        R.Aero = Rank(UVehicleAeroI::StaticClass(), UVehicleAeroII::StaticClass(), UVehicleAeroIII::StaticClass());
+        R.Brakes = Rank(UVehicleBrakesI::StaticClass(), UVehicleBrakesII::StaticClass(), UVehicleBrakesIII::StaticClass());
+        R.bStability = Bought(UVehicleStability::StaticClass());
+    }
+    else if (Family == EVehicleFamily::Explorer)
+    {
+        R.Steering = Rank(UExplorerSteeringI::StaticClass(), UExplorerSteeringII::StaticClass(), UExplorerSteeringIII::StaticClass());
+        R.Ballast = Rank(UExplorerBallast::StaticClass(), UExplorerDampers::StaticClass(), UExplorerStability::StaticClass());
+        R.bStability = Bought(UExplorerStability::StaticClass());
+        R.Grip = Rank(UExplorerWorks::StaticClass(), UExplorerDampers::StaticClass(), UExplorerStability::StaticClass());
+        R.Aero = R.Grip;
+        R.Brakes = Bought(UExplorerBrakes::StaticClass()) ? 3 : 0;
+    }
+    else if (Family == EVehicleFamily::Truck)
+    {
+        R.bStability = Bought(UTruckStability::StaticClass());
+        R.Grip = (Bought(UTruckGrip::StaticClass()) ? 2 : 0) + int(R.bStability);
+        R.Aero = R.Grip;
+        R.Brakes = (Bought(UTruckBrakes::StaticClass()) ? 2 : 0) + int(R.bStability);
+    }
+    R.bDrift = (Family == EVehicleFamily::Explorer || Family == EVehicleFamily::Truck)
+        && Bought(UVehicleDrift::StaticClass());
     return R;
 }
 

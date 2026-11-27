@@ -1,6 +1,6 @@
 # Vehicle Overclock
 
-**Private testing only. Vehicle Overclock is an unstable alpha. Expect bugs. No support is available at this stage.**
+**Vehicle Overclock is an unstable public testing alpha. Expect bugs. No support is available at this stage.**
 
 Fit Power Shards to boost vehicle speed at a higher fuel or rail power cost, and research high-speed handling upgrades at the MAM.
 
@@ -23,32 +23,28 @@ You can fit shards while parked and then enter the driver's seat. Leaving the se
 | 0 | 100% | 1.00× | 1.00× |
 | 1 | 150% | 1.30× | 1.85× |
 | 2 | 200% | 1.60× | 2.85× |
-| 3 | 250% | 1.90× | 4.00× |
+| 3 | 250% | 1.75× Explorer, 1.90× other vehicles | 4.00× |
 
 Factory Carts stay fuel-free. Locomotives draw additional rail power. Actual speed depends on terrain, load and traction.
 
-## Vehicle Handling research
+## Vehicle Engineering research
 
-The **Vehicle Handling** tree in the MAM applies to the whole session. **Chassis calibration** opens three branches. Each rank requires the preceding rank in that branch. Completing all three branches unlocks **Electronic stability control**.
+Research **Vehicle overclocking** once at the MAM for 20 Iron Plates and 30 Wire. Everyone in the session can then fit Power Shards through supported vehicle menus. Saves that already completed Chassis calibration retain this unlock.
 
-| Research | Materials | Time | Effect at high speed |
-| --- | --- | ---: | --- |
-| Chassis calibration | 20 Iron Plates, 30 Wire | 15 s | Damps excessive yaw while the tyres are on the ground |
-| Tyre grip I | 40 Screws, 8 Iron Plates | 20 s | Up to 12% additional tyre grip |
-| Tyre grip II | 4 Rotors, 12 Steel Pipes | 35 s | Up to 24% additional tyre grip |
-| Tyre grip III | 30 Rubber, 3 Motors | 60 s | Up to 36% additional tyre grip |
-| Downforce I | 12 Copper Sheets, 16 Iron Rods | 20 s | Up to 8% additional tyre loading relative to vehicle weight |
-| Downforce II | 6 Reinforced Iron Plates, 12 Steel Pipes | 35 s | Up to 16% additional loading |
-| Downforce III | 6 Modular Frames, 24 Rubber | 60 s | Up to 24% additional loading |
-| Braking I | 12 Iron Plates, 10 Cable | 20 s | Up to 15% more service braking and 0.18 m/s² extra road deceleration off throttle |
-| Braking II | 4 Stators, 12 Steel Pipes | 35 s | Up to 30% and 0.36 m/s² |
-| Braking III | 3 Motors, 24 Rubber | 60 s | Up to 45% and 0.54 m/s² |
-| Electronic stability control | 8 Circuit Boards, 4 Motors | 90 s | Corrects sideways slip, excessive yaw and roll in fast road turns |
+| Branch | Research |
+| --- | --- |
+| Fleet efficiency | Four ranks branch directly from Vehicle overclocking. At 250% clock, each rank lowers fuel or rail power demand by 0.5× stock. The progression is 4×, 3.5×, 3×, 2.5× and 2×. At intermediate clocks each rank removes one sixth of the original surcharge. At 100% clock the rate stays at 1×. Booster fuel is metered separately. |
+| Tractor | Three ranks each of tyre grip, downforce and brakes lead to electronic stability control. The Tractor chassis also unlocks **Tractor · Forward rocket** for 12 Steel Pipes and 4 Rotors (30 seconds). Hold Boost while grounded for forward thrust, including from a standstill. |
+| Explorer | All-terrain tyres, low-mounted ballast, roll dampers, rally brakes and a rally stabiliser. The three ballast levels add 6%, 10% and 14% chassis mass while overclocked. A separate three-rank steering rack adds 10%, 20% and 30% steering lock while overclocked. |
+| Truck | Haul tyres, brake servo and load stabiliser for both freight chassis. |
+| Controlled drift | For manually driven Explorers and Trucks. Steer above 29 km/h with the tyres on the ground, then hold **Left Ctrl** to swing the rear outward while the booster helps maintain corner-entry speed. Braking or using the handbrake cuts the assist. In **Mods**, select **Vehicle Overclock**, click **Boost hotkey** and press your preferred key. The same key is listed under **Vehicles → Vehicle drift** in the game controls. |
 
-Bonuses apply during manual driving above 100% clock. They start at 55% of each vehicle's stock geared top speed and reach full strength at 115%. Chassis forces require tyre contact. Locomotives inherit the braking upgrades on the driven locomotive's air brakes.
+Shift-click Compacted Coal, Packaged Turbofuel, Packaged Rocket Fuel or Packaged Ionized Fuel from your inventory while the **Overclocking** tab is selected, or drag a stack into the booster fuel slot below the shards. Click the slot to return unopened fuel. Dismantling also returns unopened booster fuel through the normal dismantle refund, with the standard overflow crate if your inventory is full. The partly burned unit has already been consumed. Each vehicle keeps its own booster fuel and partially used charge between drives. The HUD beside the speedometer shows unopened units and the current charge. Both boosters burn 100 MJ per second of firing. Releasing Boost cuts thrust.
+
+Speed-sensitive grip, braking and stability build up between 55% and 115% of stock geared speed. The Explorer's third shard adds less speed than the first two.
 
 ## Installation
 
-Install **Vehicle Overclocking** from its Hidden listing with Satisfactory Mod Manager. Its mod reference is `vehiclephysics`. If you installed the earlier private ZIP by hand, close the game and move the old `FactoryGame/Mods/VehicleOverclock` folder outside `Mods` before installing the SMM version. Both builds contain the same native module.
+Install **Vehicle Overclocking** with Satisfactory Mod Manager. Its mod reference is `vehiclephysics`. If you installed the earlier private ZIP by hand, close the game and move the old `FactoryGame/Mods/VehicleOverclock` folder outside `Mods` before installing the SMM version. Both builds contain the same native module.
 
 To build from source, put this repository in `Mods/vehiclephysics` in the matching SML starter project. Build the **FactoryGameSteam** target for **Win64 Shipping** using the Coffee Stain Unreal Engine. The native module name is `VehicleOverclock` to preserve existing save references.
