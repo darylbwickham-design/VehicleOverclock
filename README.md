@@ -39,7 +39,7 @@ Research **Vehicle overclocking** once at the MAM for 20 Iron Plates and 30 Wire
 | Truck | Haul tyres, brake servo and load stabiliser for both freight chassis. |
 | Controlled drift | For manually driven Explorers and Trucks. Steer above 29 km/h with the tyres on the ground, then hold **Left Ctrl** to swing the rear outward while the booster helps maintain corner-entry speed. Braking or using the handbrake cuts the assist. In **Mods**, select **Vehicle Overclock**, click **Boost hotkey** and press your preferred key. The same key is listed under **Vehicles → Vehicle drift** in the game controls. |
 
-The MAM uses aligned research tiers with clear rows between them. Tractor handling is on the left, Explorer handling and racing controls in the centre, with Truck handling and fleet efficiency on the right. Existing research retains its unlocks.
+The MAM fits the native seven-column view. Tractor handling and air controls are on the upper left, with Truck handling and fleet efficiency on the upper right. Scroll down for the Explorer section. Research ranks use consecutive rows. Existing research retains its unlocks.
 
 The Explorer has nine additional racing studies.
 
