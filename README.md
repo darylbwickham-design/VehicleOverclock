@@ -29,17 +29,19 @@ Factory Carts stay fuel-free. Locomotives draw additional rail power. Actual spe
 
 ## Vehicle Engineering research
 
-Research **Vehicle overclocking** once at the MAM for 20 Iron Plates and 30 Wire. Everyone in the session can then fit Power Shards through supported vehicle menus. Saves that already completed Chassis calibration retain this unlock.
+Research **Vehicle overclocking** once at the MAM for 10 Iron Plates and 15 Wire. Everyone in the session can then fit Power Shards through supported vehicle menus. Saves that already completed Chassis calibration retain this unlock.
 
 | Branch | Research |
 | --- | --- |
 | Fleet efficiency | Four ranks branch directly from Vehicle overclocking. At 250% clock, each rank lowers fuel or rail power demand by 0.5× stock. The progression is 4×, 3.5×, 3×, 2.5× and 2×. At intermediate clocks each rank removes one sixth of the original surcharge. At 100% clock the rate stays at 1×. Booster fuel is metered separately. |
-| Tractor | Three ranks each of tyre grip, downforce and brakes lead to electronic stability control. The Tractor chassis also unlocks **Tractor · Forward rocket** for 12 Steel Pipes and 4 Rotors (30 seconds). Hold Boost while grounded for forward thrust, including from a standstill. |
+| Tractor | Three ranks each of tyre grip, downforce and brakes lead to electronic stability control. The Tractor chassis also unlocks **Tractor · Forward rocket** for 6 Steel Pipes and 2 Rotors (30 seconds). Hold Boost while grounded for forward thrust, including from a standstill. |
 | Explorer | All-terrain tyres, low-mounted ballast, roll dampers, rally brakes and a rally stabiliser. The three ballast levels add 6%, 10% and 14% chassis mass while overclocked. A separate three-rank steering rack adds 10%, 20% and 30% steering lock while overclocked. |
 | Truck | Haul tyres, brake servo and load stabiliser for both freight chassis. |
 | Controlled drift | For manually driven Explorers and Trucks. Steer above 29 km/h with the tyres on the ground, then hold **Left Ctrl** to swing the rear outward while the booster helps maintain corner-entry speed. Braking or using the handbrake cuts the assist. In **Mods**, select **Vehicle Overclock**, click **Boost hotkey** and press your preferred key. The same key is listed under **Vehicles → Vehicle drift** in the game controls. |
 
 The MAM fits the native seven-column view. Tractor handling and air controls are on the upper left, with Truck handling and fleet efficiency on the upper right. Scroll down for the Explorer section. Research ranks use consecutive rows. Existing research retains its unlocks.
+
+Version 0.9.3 halves material requirements for all 42 Vehicle Engineering studies, rounding odd amounts up to whole items.
 
 The Explorer has nine additional racing studies.
 
